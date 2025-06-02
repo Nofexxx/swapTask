@@ -9,9 +9,8 @@ contract DeployScriptTest is Test {
     Swap deployedSwap;
 
     function setUp() public {
-        string memory alchemyKey = vm.envString("ALCHEMY_PRIVATE_KEY");
-        string memory url = string.concat("https://eth-mainnet.g.alchemy.com/v2/", alchemyKey);
-        vm.createSelectFork(url);
+        string memory rpcUrl = vm.envString("RPC_URL");
+        vm.createSelectFork(rpcUrl);
 
         myDeployScript = new DeployScript();
 
@@ -21,5 +20,12 @@ contract DeployScriptTest is Test {
 
     function test_nonZeroAddress() public view { assert(address(deployedSwap) != address(0)); }
 
-    function tets_contractOwner() public view { assertEq(deployedSwap.owner(), address(this)); }
+    function test_contractOwner() public view { assertEq(deployedSwap.owner(), address(msg.sender)); }
+
+    function test_revertIf_ZeroAddressRouter() public {
+        address zeroAddressRouter = address(0);
+        
+        vm.expectRevert(ISwap.ZeroAddress.selector);
+        new Swap(zeroAddressRouter);
+    }
 }

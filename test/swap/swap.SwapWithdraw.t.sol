@@ -14,9 +14,8 @@ contract WithdrawTest is Test {
     address public router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
 
     function setUp() public {
-        string memory alchemyKey = vm.envString("ALCHEMY_PRIVATE_KEY");
-        string memory url = string.concat("https://eth-mainnet.g.alchemy.com/v2/", alchemyKey);
-        vm.createSelectFork(url);
+        string memory rpcUrl = vm.envString("RPC_URL");
+        vm.createSelectFork(rpcUrl);
 
         mySwap = new Swap(router);
 
@@ -27,7 +26,7 @@ contract WithdrawTest is Test {
         vm.deal(address(mySwap), 1 ether);
     }
 
-    function test_succsessWithdraw() public {
+    function test_successWithdraw() public {
         uint256 balanceBefore = owner.balance;
 
         vm.prank(owner);

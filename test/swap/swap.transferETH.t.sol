@@ -16,9 +16,8 @@ contract transferETHTest is Test {
 
 
     function setUp() public {
-        string memory alchemyKey = vm.envString("ALCHEMY_PRIVATE_KEY");
-        string memory url = string.concat("https://eth-mainnet.g.alchemy.com/v2/", alchemyKey);
-        vm.createSelectFork(url);
+        string memory rpcUrl = vm.envString("RPC_URL");
+        vm.createSelectFork(rpcUrl);
 
         owner = address(this);
         user = makeAddr("user");
@@ -28,7 +27,21 @@ contract transferETHTest is Test {
         vm.deal(address(mySwap), 1 ether);
     }
 
-    function test_transferSuccsess() public {
+    function test_revertIf_InsufficientBalance() public {
+        uint256 amount = 2 ether;
+
+        vm.expectRevert(ISwap.InsufficientBalance.selector);
+        mySwap.transferETH(user, amount);
+    }
+
+    function test_revertIf_ZeroAmount() public {
+        uint256 wrongAmount = 0 ether;
+
+        vm.expectRevert(ISwap.ZeroAmount.selector);
+        mySwap.transferETH(user, wrongAmount);
+    }
+
+    function test_transferSuccess() public {
         uint256 amount = 0.5 ether;
         uint256 balanceBefore = user.balance;
 
@@ -37,12 +50,5 @@ contract transferETHTest is Test {
         uint256 balanceAfter = user.balance;
 
         assertGt(balanceAfter, balanceBefore);
-    }
-
-    function test_revertIf_InsufficientBalance() public {
-        uint256 amount = 2 ether;
-
-        vm.expectRevert(ISwap.InsufficientBalance.selector);
-        mySwap.transferETH(user, amount);
     }
 }

@@ -22,9 +22,8 @@ contract transferTokensTest is Test{
 
 
     function setUp() public {
-        string memory alchemyKey = vm.envString("ALCHEMY_PRIVATE_KEY");
-        string memory url = string.concat("https://eth-mainnet.g.alchemy.com/v2/", alchemyKey);
-        vm.createSelectFork(url);
+        string memory rpcUrl = vm.envString("RPC_URL");
+        vm.createSelectFork(rpcUrl);
 
         mySwap = new Swap(router);
         owner = makeAddr("owner");
@@ -36,6 +35,31 @@ contract transferTokensTest is Test{
         deal(whale, 1 ether);
         vm.prank(whale);
         tokenIn.transfer(owner, amount);
+    }
+
+    function test_revertIf_InsufficientBalance() public {
+        uint256 wantToTransfer = 200 * 10 ** 6;
+
+        vm.startPrank(owner);
+
+        tokenIn.transfer(address(mySwap), tokenIn.balanceOf(owner));
+        vm.expectRevert(ISwap.InsufficientBalance.selector);
+        mySwap.transferTokens(address(tokenIn), receiver, wantToTransfer);
+
+        vm.stopPrank();
+    }
+
+    function test_revertIf_ZeroAmount() public {
+        uint256 wrongAmount = 0;
+
+        vm.startPrank(owner);
+
+        tokenIn.transfer(address(mySwap), wrongAmount);
+
+        vm.expectRevert(ISwap.ZeroAmount.selector);
+        mySwap.transferTokens(address(tokenIn), receiver, wrongAmount);
+        
+        vm.stopPrank();
     }
 
     function test_transferTokensSuccess() public {
@@ -51,17 +75,5 @@ contract transferTokensTest is Test{
         uint256 receiverBalance = tokenIn.balanceOf(receiver);
 
         assertEq(receiverBalance, wantToTransfer);
-    }
-
-    function test_revertIf_InsufficientBalance() public {
-        uint256 wantToTransfer = 200 * 10 ** 6;
-
-        vm.startPrank(owner);
-
-        tokenIn.transfer(address(mySwap), tokenIn.balanceOf(owner));
-        vm.expectRevert(ISwap.InsufficientBalance.selector);
-        mySwap.transferTokens(address(tokenIn), receiver, wantToTransfer);
-
-        vm.stopPrank();
     }
 }

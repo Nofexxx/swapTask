@@ -19,9 +19,8 @@ contract swapTokensForETHTest is Test {
     address public user; 
 
     function setUp() public {
-        string memory alchemyKey = vm.envString("ALCHEMY_PRIVATE_KEY");
-        string memory url = string.concat("https://eth-mainnet.g.alchemy.com/v2/", alchemyKey);
-        vm.createSelectFork(url);
+        string memory rpcUrl = vm.envString("RPC_URL");
+        vm.createSelectFork(rpcUrl);
 
         mySwap = new Swap(router);
         user = makeAddr("user");
@@ -40,11 +39,6 @@ contract swapTokensForETHTest is Test {
         mySwap.swapTokensForETH(address(tokenInZeroAddress), amountIn, amountOutMin);
     }
 
-    function test_revertIf_routerZeroAddress() public {
-        vm.expectRevert(ISwap.ZeroAddress.selector);
-        new Swap(address(0));
-    }
-
     function test_revertIf_InvalidAmountIn() public {
         uint256 invalidAmountIn = 0;
 
@@ -54,19 +48,6 @@ contract swapTokensForETHTest is Test {
 
         vm.expectRevert(ISwap.InvalidAmountIn.selector);
         mySwap.swapTokensForETH(address(tokenIn), invalidAmountIn, amountOutMin);
-
-        vm.stopPrank();
-    }
-
-    function test_revertIf_ZeroSlippage() public {
-        uint256 invalidAmountOutMin = 0;
-
-        vm.startPrank(user);
-
-        tokenIn.approve(address(mySwap), amountIn);
-
-        vm.expectRevert(ISwap.ZeroSlippageNotAllowed.selector);
-        mySwap.swapTokensForETH(address(tokenIn), amountIn, invalidAmountOutMin);
 
         vm.stopPrank();
     }
