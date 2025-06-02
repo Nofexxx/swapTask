@@ -16,7 +16,6 @@ contract transferTokensTest is Test{
 
     address public router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     address public whale = 0x55FE002aefF02F77364de339a1292923A15844B8;
-    address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public receiver;
     address public owner;
 
@@ -27,7 +26,7 @@ contract transferTokensTest is Test{
         string memory url = string.concat("https://eth-mainnet.g.alchemy.com/v2/", alchemyKey);
         vm.createSelectFork(url);
 
-        mySwap = new Swap(router, weth);
+        mySwap = new Swap(router);
         owner = makeAddr("owner");
         receiver = makeAddr("receiver");
         mySwap.transferOwnership(owner);

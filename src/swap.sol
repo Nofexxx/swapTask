@@ -11,14 +11,17 @@ contract Swap is ISwap, Ownable {
     IUniswapV2Router02 public immutable router;
     address public immutable WETH;
 
-    constructor(address _router, address _WETH) Ownable(msg.sender) {
-        WETH = _WETH;
+    constructor(address _router) Ownable(msg.sender) {
+        if(_router == address(0)) revert ZeroAddress(); 
+
         router = IUniswapV2Router02(_router);
+        WETH = router.WETH();
     } 
 
     function swapETHforTokens(address tokenOut, uint256 amountOutMin) external payable{
         if(WETH == address(0) || tokenOut == address(0)) revert ZeroAddress();
         if(msg.value == 0) revert InsufficientBalance();
+        if(amountOutMin == 0) revert ZeroSlippageNotAllowed();
 
         address[] memory path = new address[](2);
         path[0] = WETH;
@@ -37,8 +40,13 @@ contract Swap is ISwap, Ownable {
 
     function swapTokensForETH(address tokenIn, uint256 amountIn, uint256 amountOutMin) external {
         if(WETH == address(0) || tokenIn == address(0)) revert ZeroAddress();
+        if(amountIn == 0) revert InvalidAmountIn();
+        if(amountOutMin == 0) revert ZeroSlippageNotAllowed();
 
-        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        bool succsess = IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        if(!succsess) revert TransferFailed();
+
+        IERC20(tokenIn).approve(address(router), 0);
         IERC20(tokenIn).approve(address(router), amountIn);
 
         address[] memory path = new address[](2);
@@ -57,9 +65,14 @@ contract Swap is ISwap, Ownable {
     }
 
     function swapTokensForToken(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMin) external {
-        if(WETH == address(0) || tokenIn == address(0)) revert ZeroAddress();
+        if(WETH == address(0) || tokenIn == address(0) || tokenOut == address(0)) revert ZeroAddress();
+        if(amountIn == 0) revert InvalidAmountIn();
+        if(amountOutMin == 0) revert ZeroSlippageNotAllowed();
 
-        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        bool succsess = IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        if(!succsess) revert TransferFailed();
+
+        IERC20(tokenIn).approve(address(router), 0);
         IERC20(tokenIn).approve(address(router), amountIn);
 
         address[] memory path = new address[](2);
@@ -78,7 +91,9 @@ contract Swap is ISwap, Ownable {
     }
 
     function transferETH(address to, uint256 amount) external onlyOwner{
+        if(to == address(0)) revert ZeroAddress();
         if(address(this).balance < amount) revert InsufficientBalance();
+        
         (bool success, ) = to.call{value: amount}("");
         if(!success) revert WithdrawFailed();
 
@@ -86,7 +101,9 @@ contract Swap is ISwap, Ownable {
     }
 
     function transferTokens(address token, address to, uint256 amount) external onlyOwner{
+        if(to == address(0) || token == address(0)) revert ZeroAddress();
         if(IERC20(token).balanceOf(address(this)) < amount) revert InsufficientBalance();
+        
         IERC20(token).transfer(to, amount);
 
         emit TransferedTokens(to, amount);
@@ -99,7 +116,7 @@ contract Swap is ISwap, Ownable {
         (bool success, ) = owner().call{value: ETHbalance}("");
         if(!success) revert WithdrawFailed();
 
-        emit Withdraw(msg.sender, address(this).balance);
+        emit Withdraw(msg.sender, ETHbalance);
     }    
 
     receive() external payable {}

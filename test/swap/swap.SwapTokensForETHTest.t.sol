@@ -15,7 +15,6 @@ contract swapTokensForETHTest is Test {
     uint256 public amountIn = 100 * 10**6; // 100 tokenIn
 
     address public router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-    address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public whale = 0x55FE002aefF02F77364de339a1292923A15844B8;
     address public user; 
 
@@ -24,7 +23,7 @@ contract swapTokensForETHTest is Test {
         string memory url = string.concat("https://eth-mainnet.g.alchemy.com/v2/", alchemyKey);
         vm.createSelectFork(url);
 
-        mySwap = new Swap(router, weth);
+        mySwap = new Swap(router);
         user = makeAddr("user");
         
         tokenIn = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
@@ -34,16 +33,47 @@ contract swapTokensForETHTest is Test {
         tokenIn.transfer(user, amountIn);
     }
 
+    function test_revertIf_tokenInZeroAddress() public{
+        IERC20 tokenInZeroAddress = IERC20(address(0));
 
-    function test_revertIf_ZeroAddress() public{
-        Swap zeroAddressSwap = new Swap(address(0), address(0));
-        
         vm.expectRevert(ISwap.ZeroAddress.selector);
-        zeroAddressSwap.swapTokensForETH(address(tokenIn), amountIn, amountOutMin);
+        mySwap.swapTokensForETH(address(tokenInZeroAddress), amountIn, amountOutMin);
     }
 
-    function test_swapTokensForETH() public {
+    function test_revertIf_routerZeroAddress() public {
+        vm.expectRevert(ISwap.ZeroAddress.selector);
+        new Swap(address(0));
+    }
+
+    function test_revertIf_InvalidAmountIn() public {
+        uint256 invalidAmountIn = 0;
+
         vm.startPrank(user);
+
+        tokenIn.approve(address(mySwap), amountIn);
+
+        vm.expectRevert(ISwap.InvalidAmountIn.selector);
+        mySwap.swapTokensForETH(address(tokenIn), invalidAmountIn, amountOutMin);
+
+        vm.stopPrank();
+    }
+
+    function test_revertIf_ZeroSlippage() public {
+        uint256 invalidAmountOutMin = 0;
+
+        vm.startPrank(user);
+
+        tokenIn.approve(address(mySwap), amountIn);
+
+        vm.expectRevert(ISwap.ZeroSlippageNotAllowed.selector);
+        mySwap.swapTokensForETH(address(tokenIn), amountIn, invalidAmountOutMin);
+
+        vm.stopPrank();
+    }
+
+    function test_successSwapTokensForETH() public {
+        vm.startPrank(user);
+
         tokenIn.approve(address(mySwap), amountIn);
 
         uint256 ethBefore = user.balance;
@@ -53,8 +83,7 @@ contract swapTokensForETHTest is Test {
         uint256 ethBalance = user.balance;
 
         assertGt(ethBalance, ethBefore);
-        vm.stopPrank();
-    }
 
-    
+        vm.stopPrank();
+    }   
 }

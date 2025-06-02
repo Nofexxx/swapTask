@@ -17,7 +17,6 @@ contract SwapTokensForTokensTest is Test {
 
     address public router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     address public whale = 0x55FE002aefF02F77364de339a1292923A15844B8;
-    address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public user;
 
     function setUp() public {
@@ -25,7 +24,7 @@ contract SwapTokensForTokensTest is Test {
         string memory url = string.concat("https://eth-mainnet.g.alchemy.com/v2/", alchemyKey);
         vm.createSelectFork(url);
 
-        mySwap = new Swap(router, weth);
+        mySwap = new Swap(router);
         user = makeAddr("user");
         
         tokenIn = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
@@ -36,7 +35,62 @@ contract SwapTokensForTokensTest is Test {
         tokenIn.transfer(user, amountIn);
     }
 
-    function test_swapTokensForTokens() public {
+    function test_revertIf_TokenInZeroAddress() public {
+        IERC20 zeroAddressTokenIn = IERC20(address(0));
+        
+        vm.startPrank(user);
+        
+        vm.expectRevert(ISwap.ZeroAddress.selector);
+        mySwap.swapTokensForToken(address(zeroAddressTokenIn),address(tokenOut), amountIn, amountOutMin);
+        
+        vm.stopPrank();
+    }
+
+
+    function test_revertIf_TokenOutZeroAddress() public {
+        IERC20 zeroAddressTokenOut = IERC20(address(0));
+        
+        vm.startPrank(user);
+        
+        vm.expectRevert(ISwap.ZeroAddress.selector);
+        mySwap.swapTokensForToken(address(tokenIn),address(zeroAddressTokenOut), amountIn, amountOutMin);
+        
+        vm.stopPrank();
+    }
+
+    function test_revertIf_routerZeroAddress() public {
+        vm.expectRevert(ISwap.ZeroAddress.selector);
+        new Swap(address(0));
+    }
+
+    function test_revertIf_InvalidAmountIn() public {
+        uint256 invalidAmountIn = 0;
+
+        vm.startPrank(user);
+
+        tokenIn.approve(address(mySwap), amountIn);
+
+        vm.expectRevert(ISwap.InvalidAmountIn.selector);
+        mySwap.swapTokensForToken(address(tokenIn), address(tokenOut), invalidAmountIn, amountOutMin);
+
+        vm.stopPrank();
+    }
+
+
+    function test_revertIf_ZeroSlippage() public {
+        uint256 invalidAmountOutMin = 0;
+
+        vm.startPrank(user);
+
+        tokenIn.approve(address(mySwap), amountIn);
+
+        vm.expectRevert(ISwap.ZeroSlippageNotAllowed.selector);
+        mySwap.swapTokensForToken(address(tokenIn), address(tokenOut), amountIn, invalidAmountOutMin);
+
+        vm.stopPrank();
+    }
+
+    function test_successSwapTokensForTokens() public {
         uint256 balanceUsdcBefore = tokenIn.balanceOf(user);
         uint256 balanceUniswapBefore = tokenOut.balanceOf(user);
 
@@ -51,17 +105,6 @@ contract SwapTokensForTokensTest is Test {
         assertLt(balanceUsdcAfter, balanceUsdcBefore);
         assertGt(balanceUniswapAfter, balanceUniswapBefore);
 
-        vm.stopPrank();
-    }
-
-    function test_revertIf_ZeroAddress() public {
-        Swap zeroAddressSwap = new Swap(address(0), address(0));
-
-        vm.startPrank(user);
-        
-        vm.expectRevert(ISwap.ZeroAddress.selector);
-        zeroAddressSwap.swapTokensForToken(address(tokenIn),address(tokenOut), amountIn, amountOutMin);
-        
         vm.stopPrank();
     }
 }

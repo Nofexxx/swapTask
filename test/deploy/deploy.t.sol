@@ -9,6 +9,10 @@ contract DeployScriptTest is Test {
     Swap deployedSwap;
 
     function setUp() public {
+        string memory alchemyKey = vm.envString("ALCHEMY_PRIVATE_KEY");
+        string memory url = string.concat("https://eth-mainnet.g.alchemy.com/v2/", alchemyKey);
+        vm.createSelectFork(url);
+
         myDeployScript = new DeployScript();
 
         myDeployScript.run();

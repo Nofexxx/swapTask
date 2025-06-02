@@ -13,6 +13,9 @@ interface ISwap {
     error InsufficientBalance();
     error WithdrawFailed();
     error ZeroAddress();
+    error TransferFailed();
+    error InvalidAmountIn();
+    error ZeroSlippageNotAllowed();
     
     function swapETHforTokens(address tokenOut, uint256 amountOutMin) external payable;
     function swapTokensForETH(address tokenIn, uint256 amountIn, uint256 amountOutMin) external;

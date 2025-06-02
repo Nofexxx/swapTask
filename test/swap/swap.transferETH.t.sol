@@ -13,14 +13,17 @@ contract transferETHTest is Test {
     address public user;
     
     address public router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-    address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
 
     function setUp() public {
+        string memory alchemyKey = vm.envString("ALCHEMY_PRIVATE_KEY");
+        string memory url = string.concat("https://eth-mainnet.g.alchemy.com/v2/", alchemyKey);
+        vm.createSelectFork(url);
+
         owner = address(this);
         user = makeAddr("user");
 
-        mySwap = new Swap(router, weth);
+        mySwap = new Swap(router);
 
         vm.deal(address(mySwap), 1 ether);
     }

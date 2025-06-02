@@ -13,7 +13,6 @@ contract SwapETHforTokensTest is Test {
 
     uint256 public amountOutMin = 1 * 10**6;
     address public router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-    address public weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public user; 
     
 
@@ -22,30 +21,44 @@ contract SwapETHforTokensTest is Test {
         string memory url = string.concat("https://eth-mainnet.g.alchemy.com/v2/", alchemyKey);
         vm.createSelectFork(url);
         
-        mySwap = new Swap(router, weth);
+        mySwap = new Swap(router);
         user = makeAddr("user");
         tokenOut = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     }
+
+    function test_revertIf_tokenOutZeroAddress() public{
+        IERC20 tokenOutZeroAddress = IERC20(address(0));
+
+        vm.expectRevert(ISwap.ZeroAddress.selector);
+        mySwap.swapETHforTokens{value: 1 ether}(address(tokenOutZeroAddress), amountOutMin);
+    }
+
+        function test_revertIf_routerZeroAddress() public {
+        vm.expectRevert(ISwap.ZeroAddress.selector);
+        new Swap(address(0));
+    }   
 
     function test_revertIf_InsufficientBalance() public{
         vm.expectRevert(ISwap.InsufficientBalance.selector);
         mySwap.swapETHforTokens(address(tokenOut), amountOutMin);
     }
 
-    function test_revertIf_ZeroAddress() public{
-        Swap zeroAddressSwap = new Swap(address(0), address(0));
+    function test_revertIf_ZeroSlippage() public {
+        uint256 invalidAmountOutMin = 0;
         
         vm.deal(user, 1 ether);
         vm.prank(user);
-        vm.expectRevert(ISwap.ZeroAddress.selector);
-        zeroAddressSwap.swapETHforTokens{value: 1 ether}(address(tokenOut), amountOutMin);
+
+        vm.expectRevert(ISwap.ZeroSlippageNotAllowed.selector);
+        mySwap.swapETHforTokens{value: 1 ether}(address(tokenOut), invalidAmountOutMin);
     }
 
-    function test_swapETHforTokens() public {
+    function test_succsessSwapETHforTokens() public {
         uint256 balanceBefore = tokenOut.balanceOf(user);
 
         vm.deal(user, 1 ether);
         vm.prank(user);
+
         mySwap.swapETHforTokens{value: 1 ether}(address(tokenOut), amountOutMin);
         
         assertEq(user.balance, 0);
